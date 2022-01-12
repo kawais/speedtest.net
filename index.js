@@ -114,10 +114,14 @@ function getHttp ( theUrl, discard, callback ) {
 		Math.trunc( Math.random() * 400 + 103 ) +
 		' Safari/537.36'
 
+	let proxyConfig = null
 	if ( proxyOptions ) {
+		proxyConfig = proxyOptions.match( /\/\/(.*?):(\d+)/ )
+	}
+	if ( proxyConfig ) {
 		var connectReq = http.request( { // establishing a tunnel
-			host: '127.0.0.1',
-			port: 1080,
+			host: proxyConfig[ 1 ],
+			port: proxyConfig[ 2 ],
 			method: 'CONNECT',
 			path: `${ options.host.indexOf( ':' ) > 0 ? options.host : ( `${ options.host }:${ protocol === 'https:' ? 443 : 80 }` ) }`,
 		} ).on( 'connect', function ( res, socket, head ) {
@@ -685,6 +689,8 @@ function speedTest ( options ) {
 	}
 
 	function startUpload () {
+		uploadCallback( null, 0 )
+		return
 		self.emit( 'status', 'Testing Upload' )
 		var sizes = [],
 			sizesizes = [
@@ -708,7 +714,8 @@ function speedTest ( options ) {
 			}
 		}
 		self.emit( 'testserver', speedInfo.bestServer )
-		uploadSpeed.call( self, speedInfo.bestServer.url, sizes, options.maxTime, function ( err, speed ) {
+		uploadSpeed.call( self, speedInfo.bestServer.url, sizes, options.maxTime, uploadCallback )
+		function uploadCallback ( err, speed ) {
 			if ( err ) return self.emit( 'error', err )
 			speedInfo.uploadSpeed = speed
 			speedInfo.speedTestUploadSpeed = speed * speedTestUploadCorrectionFactor / 125000
@@ -775,7 +782,7 @@ function speedTest ( options ) {
 
 			self.emit( 'data', data )
 			postResults()
-		} )
+		}
 	}
 
 	function postResults () {
